@@ -1,0 +1,30 @@
+services:
+  api:
+    build: .
+    environment:
+      REPONYX_ENVIRONMENT: development
+      REPONYX_DATABASE_URL: postgresql+psycopg://reponyx:reponyx@postgres:5432/reponyx
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: reponyx
+      POSTGRES_USER: reponyx
+      POSTGRES_PASSWORD: reponyx
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reponyx -d reponyx"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-bg text-fg font-sans antialiased text-base;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  * {
+    @apply border-border;
+  }
+  ::-webkit-scrollbar {
+    @apply w-[6px] h-[6px];
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-fg-subtle;
+  }
+}
+
+@layer components {
+  .page {
+    @apply max-w-content mx-auto px-6 py-5;
+  }
+  .page-header {
+    @apply mb-5;
+  }
+  .page-title {
+    @apply text-lg font-semibold text-fg;
+  }
+  .page-subtitle {
+    @apply text-sm text-fg-muted mt-0.5;
+  }
+  .section {
+    @apply mb-5;
+  }
+  .section-title {
+    @apply text-xs font-medium text-fg-muted uppercase tracking-wider mb-2;
+  }
+  .divider {
+    @apply border-t border-border my-5;
+  }
+
+  .table-wrap {
+    @apply overflow-x-auto;
+  }
+  table {
+    @apply w-full text-sm;
+  }
+  thead th {
+    @apply text-left text-xs font-medium text-fg-muted uppercase tracking-wider py-1.5 px-2 border-b border-border;
+  }
+  tbody td {
+    @apply py-1.5 px-2 border-b border-border-subtle;
+  }
+  tbody tr:hover {
+    @apply bg-bg-subtle;
+  }
+  tbody tr:last-child td {
+    @apply border-b-0;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium leading-none;
+  }
+  .badge-success {
+    @apply badge bg-success/10 text-success;
+  }
+  .badge-warning {
+    @apply badge bg-warning/10 text-warning;
+  }
+  .badge-danger {
+    @apply badge bg-danger/10 text-danger;
+  }
+  .badge-info {
+    @apply badge bg-accent/10 text-accent;
+  }
+  .badge-neutral {
+    @apply badge bg-bg-inset text-fg-muted;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-accent text-white hover:bg-accent-hover;
+  }
+  .btn-secondary {
+    @apply btn bg-bg text-fg border border-border hover:bg-bg-subtle;
+  }
+  .btn-danger {
+    @apply btn bg-danger/10 text-danger border border-danger/20 hover:bg-danger/20;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-fg-muted hover:text-fg hover:bg-bg-subtle;
+  }
+
+  .input {
+    @apply w-full bg-bg border border-border rounded px-2.5 py-1.5 text-sm text-fg placeholder-fg-subtle focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-colors font-sans;
+  }
+  .input-mono {
+    @apply input font-mono text-xs;
+  }
+
+  .skeleton {
+    @apply bg-bg-inset rounded animate-pulse;
+  }
+
+  .card {
+    @apply bg-bg border border-border rounded-md p-4;
+  }
+}
