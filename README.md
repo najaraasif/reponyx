@@ -1,32 +1,39 @@
-﻿# Reponyx
+<div align="center">
 
-**AI Software Engineering Agent**
+# Reponyx
 
-Investigate repository issues. Collect source evidence. Identify root causes. Generate minimal repairs. Run tests in isolation. Review the resulting changes.
+### AI Software Engineering Agent
 
-```
-Repository
-    ↓
-Investigation
-    ↓
-Evidence
-    ↓
-Root Cause
-    ↓
-Repair
-    ↓
-Docker
-    ↓
-Tests
-    ↓
-Review
-```
+Investigate repository issues. Collect source evidence. Identify root causes.
+Generate minimal repairs. Run tests in isolation. Review the resulting changes.
 
-## What Reponyx Does
+<br />
+
+[![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Framework-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Next.js](https://img.shields.io/badge/Next.js-Frontend-000000?style=flat-square&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![Docker](https://img.shields.io/badge/Docker-Sandbox-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](#license)
+
+<br />
+
+[Demo](https://github.com/najaraasif/demo-buggy-calculator) ·
+[Architecture](ARCHITECTURE.md) ·
+[Security](SECURITY.md) ·
+[Contributing](CONTRIBUTING.md)
+
+</div>
+
+---
+
+## Overview
 
 Reponyx takes a repository issue description, inspects the codebase, retrieves relevant evidence, identifies the root cause, generates a minimal patch, executes tests inside an isolated Docker sandbox, and sends the change through human review.
 
 It is not a generic chatbot. It is a controlled software-engineering system built around repository intelligence, source-attributed retrieval, structured investigation, ephemeral repair workspaces, Docker test execution, bounded iteration, and human review.
+
+---
 
 ## Engineering Highlights
 
