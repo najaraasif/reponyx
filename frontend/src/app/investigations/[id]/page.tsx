@@ -96,7 +96,32 @@ export default function InvestigationDetailPage() {
   const affectedFiles = useMemo(() => report?.affected_files || [], [report]);
   const relevantSymbols = useMemo(() => report?.relevant_symbols || [], [report]);
   const hypotheses = useMemo(() => report?.hypotheses || [], [report]);
-  const categorized = useMemo(() => classifyEvidence(evidence, affectedFiles, relevantSymbols), [evidence, affectedFiles, relevantSymbols]);
+  const classifiedEvidence = useMemo(() => report?.classified_evidence || [], [report]);
+  const categorized = useMemo(() => {
+    if (classifiedEvidence.length > 0) {
+      const evidenceMap = new Map(evidence.map((ev) => [ev.evidence_id, ev]));
+      const categories: Record<string, EvidenceItem[]> = {
+        primary_implementation: [],
+        primary_tests: [],
+        direct_references: [],
+        supporting: [],
+        unrelated: [],
+      };
+      for (const item of classifiedEvidence) {
+        const ev = evidenceMap.get(item.evidence_id);
+        if (ev) {
+          const key = item.category === "primary_implementation" ? "primary_implementation"
+            : item.category === "primary_tests" ? "primary_tests"
+            : item.category === "direct_references" ? "direct_references"
+            : item.category === "supporting" ? "supporting"
+            : "unrelated";
+          categories[key].push(ev);
+        }
+      }
+      return categories;
+    }
+    return classifyEvidence(evidence, affectedFiles, relevantSymbols);
+  }, [evidence, affectedFiles, relevantSymbols, classifiedEvidence]);
   const parsedRootCause = useMemo(() => parseRootCause(report?.root_cause || null), [report]);
 
   const firstHyp = hypotheses[0];
@@ -174,7 +199,7 @@ export default function InvestigationDetailPage() {
       {/* ── Summary strip ──────────────────────────────────────── */}
       <div className="flex items-center gap-5 text-xs text-fg-muted mb-5 py-2 border-b border-border">
         <span>Evidence: <span className="text-fg font-medium">{evidence.length}</span></span>
-        <span>Source: <span className="text-fg font-medium">{categorized.primary_implementation.length + categorized.primary_test.length}</span> primary</span>
+        <span>Primary: <span className="text-fg font-medium">{categorized.primary_implementation.length + categorized.primary_tests.length + (categorized.direct_references?.length || 0)}</span></span>
         <span>Files: <span className="text-fg font-medium">{affectedFiles.length}</span></span>
         <span>Symbols: <span className="text-fg font-medium">{relevantSymbols.length}</span></span>
         <span>Repair: <span className={`font-medium ${repairReady ? "text-success" : "text-fg-muted"}`}>{repairReady ? "Ready" : "Not Ready"}</span></span>
@@ -247,7 +272,10 @@ export default function InvestigationDetailPage() {
           {/* Evidence */}
           <Section title={`Evidence (${evidence.filter((e) => e.type !== "dependency").length} items)`}>
             <EvidenceCategoryTable title="Primary Implementation" items={categorized.primary_implementation} accent />
-            <EvidenceCategoryTable title="Primary Test" items={categorized.primary_test} accent />
+            <EvidenceCategoryTable title="Primary Tests" items={categorized.primary_tests} accent />
+            {categorized.direct_references && categorized.direct_references.length > 0 && (
+              <EvidenceCategoryTable title="Direct References" items={categorized.direct_references} />
+            )}
             {categorized.supporting.length > 0 && (
               <EvidenceCategoryTable title="Supporting" items={categorized.supporting} />
             )}

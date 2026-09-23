@@ -653,3 +653,185 @@ def test_defect_explanation_with_variance() -> None:
     assert "2.0" in explanation
     assert "2.5" in explanation
     assert "divides by" in explanation.lower()
+
+
+def test_ranker_classifies_variance_evidence() -> None:
+    from reponyx.investigation.ranker import classify_evidence
+    from reponyx.investigation.models import EvidenceCategory
+
+    evidence = [
+        Evidence(
+            "ev-1", "retrieval_result", "src/statistics.py", "variance",
+            30, 33, "Variance function", "src/statistics.py:30-33",
+        ),
+        Evidence(
+            "ev-2", "retrieval_result", "tests/test_statistics.py", "test_variance",
+            35, 45, "Test variance", "tests/test_statistics.py:35-45",
+        ),
+        Evidence(
+            "ev-3", "retrieval_result", "src/simulation.py", "estimate_pi",
+            4, 19, "Pi estimation", "src/simulation.py:4-19",
+        ),
+    ]
+    classified = classify_evidence(
+        evidence,
+        "Population variance returns wrong value. Expected 2.0, reported 2.5.",
+    )
+    impl = [c for c in classified if c.category == EvidenceCategory.PRIMARY_IMPLEMENTATION]
+    tests = [c for c in classified if c.category == EvidenceCategory.PRIMARY_TESTS]
+    unrelated = [c for c in classified if c.category == EvidenceCategory.UNRELATED]
+
+    assert len(impl) == 1
+    assert impl[0].file_path == "src/statistics.py"
+    assert len(tests) == 1
+    assert tests[0].file_path == "tests/test_statistics.py"
+    assert len(unrelated) == 1
+    assert unrelated[0].file_path == "src/simulation.py"
+
+
+def test_ranker_direct_references_for_source_inspection() -> None:
+    from reponyx.investigation.ranker import classify_evidence
+    from reponyx.investigation.models import EvidenceCategory
+
+    evidence = [
+        Evidence(
+            "ev-1", "retrieval_result", "src/statistics.py", "variance",
+            30, 33, "Variance function", "src/statistics.py:30-33",
+        ),
+        Evidence(
+            "ev-2", "retrieval_result", "src/api.py", "compute_stats",
+            10, 15, "Calls variance", "src/api.py:10-15",
+        ),
+    ]
+    classified = classify_evidence(
+        evidence,
+        "Population variance returns wrong value.",
+    )
+    impl = [c for c in classified if c.category == EvidenceCategory.PRIMARY_IMPLEMENTATION]
+    assert len(impl) == 1
+    assert impl[0].file_path == "src/statistics.py"
+
+
+def test_ranker_source_code_with_symbol_is_direct_reference() -> None:
+    from reponyx.investigation.ranker import classify_evidence
+    from reponyx.investigation.models import EvidenceCategory
+
+    evidence = [
+        Evidence(
+            "ev-1", "retrieval_result", "src/statistics.py", "variance",
+            30, 33, "Variance function", "src/statistics.py:30-33",
+        ),
+        Evidence(
+            "source-src/api.py-10", "source_code", "src/api.py", "compute_stats",
+            10, 15, "Source inspection of compute_stats", "src/api.py:10-15",
+        ),
+    ]
+    classified = classify_evidence(
+        evidence,
+        "Population variance returns wrong value.",
+    )
+    direct = [c for c in classified if c.category == EvidenceCategory.DIRECT_REFERENCES]
+    assert len(direct) == 1
+    assert direct[0].evidence_id == "source-src/api.py-10"
+
+
+def test_ranker_unrelated_evidence() -> None:
+    from reponyx.investigation.ranker import classify_evidence
+    from reponyx.investigation.models import EvidenceCategory
+
+    evidence = [
+        Evidence(
+            "ev-1", "retrieval_result", "src/simulation.py", "estimate_pi",
+            4, 19, "Pi estimation", "src/simulation.py:4-19",
+        ),
+        Evidence(
+            "ev-2", "retrieval_result", "tests/test_simulation.py", "test_pi",
+            10, 20, "Test pi", "tests/test_simulation.py:10-20",
+        ),
+    ]
+    classified = classify_evidence(
+        evidence,
+        "Population variance returns wrong value.",
+    )
+    unrelated = [c for c in classified if c.category == EvidenceCategory.UNRELATED]
+    assert len(unrelated) == 2
+
+
+def test_ranker_empty_evidence() -> None:
+    from reponyx.investigation.ranker import classify_evidence
+
+    classified = classify_evidence([], "any issue")
+    assert classified == []
+
+
+def test_ranker_no_matching_symbols() -> None:
+    from reponyx.investigation.ranker import classify_evidence
+    from reponyx.investigation.models import EvidenceCategory
+
+    evidence = [
+        Evidence(
+            "ev-1", "retrieval_result", "src/utils.py", "helper",
+            1, 10, "Helper function", "src/utils.py:1-10",
+        ),
+    ]
+    classified = classify_evidence(
+        evidence,
+        "Population variance returns wrong value.",
+    )
+    assert len(classified) == 1
+    assert classified[0].category == EvidenceCategory.UNRELATED
+
+
+def test_ranker_multi_file_relevance() -> None:
+    from reponyx.investigation.ranker import classify_evidence
+    from reponyx.investigation.models import EvidenceCategory
+
+    evidence = [
+        Evidence(
+            "ev-1", "retrieval_result", "src/statistics.py", "variance",
+            30, 33, "Variance function", "src/statistics.py:30-33",
+        ),
+        Evidence(
+            "ev-2", "retrieval_result", "src/statistics.py", "mean",
+            10, 15, "Mean function", "src/statistics.py:10-15",
+        ),
+        Evidence(
+            "ev-3", "retrieval_result", "tests/test_statistics.py", "test_variance",
+            35, 45, "Test variance", "tests/test_statistics.py:35-45",
+        ),
+        Evidence(
+            "ev-4", "retrieval_result", "tests/test_statistics.py", "test_mean",
+            50, 60, "Test mean", "tests/test_statistics.py:50-60",
+        ),
+    ]
+    classified = classify_evidence(
+        evidence,
+        "Population variance returns wrong value.",
+    )
+    impl = [c for c in classified if c.category == EvidenceCategory.PRIMARY_IMPLEMENTATION]
+    tests = [c for c in classified if c.category == EvidenceCategory.PRIMARY_TESTS]
+    assert len(impl) == 1
+    assert impl[0].symbol == "variance"
+    assert len(tests) == 1
+    assert tests[0].symbol == "test_variance"
+
+
+def test_ranker_relevance_score_ordering() -> None:
+    from reponyx.investigation.ranker import classify_evidence
+
+    evidence = [
+        Evidence(
+            "ev-1", "retrieval_result", "src/statistics.py", "variance",
+            30, 33, "Variance function", "src/statistics.py:30-33",
+        ),
+        Evidence(
+            "ev-2", "retrieval_result", "src/statistics.py", "helper",
+            1, 10, "Helper function", "src/statistics.py:1-10",
+        ),
+    ]
+    classified = classify_evidence(
+        evidence,
+        "Population variance returns wrong value.",
+    )
+    assert len(classified) == 2
+    assert classified[0].relevance_score >= classified[1].relevance_score

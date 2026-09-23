@@ -28,12 +28,30 @@ class Confidence(StrEnum):
     LOW = "low"
 
 
+class EvidenceCategory(StrEnum):
+    PRIMARY_IMPLEMENTATION = "primary_implementation"
+    PRIMARY_TESTS = "primary_tests"
+    DIRECT_REFERENCES = "direct_references"
+    SUPPORTING = "supporting"
+    UNRELATED = "unrelated"
+
+
 @dataclass(frozen=True, slots=True)
 class SourceInspection:
     file_path: str
     start_line: int
     end_line: int
     content: str
+
+
+@dataclass(frozen=True, slots=True)
+class ClassifiedEvidenceItem:
+    evidence_id: str
+    category: EvidenceCategory
+    file_path: str
+    symbol: str | None
+    relevance_score: float
+    reason: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,6 +105,7 @@ class InvestigationReport:
     confidence: Confidence
     limitations: tuple[str, ...]
     recommended_next_step: str
+    classified_evidence: tuple[ClassifiedEvidenceItem, ...] = ()
 
 
 class InvestigationState(TypedDict, total=False):

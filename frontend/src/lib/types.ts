@@ -92,6 +92,7 @@ export interface InvestigationReport {
   confidence: string;
   limitations: string[];
   recommended_next_step: string;
+  classified_evidence: ClassifiedEvidenceItem[];
 }
 
 export interface EvidenceItem {
@@ -103,6 +104,15 @@ export interface EvidenceItem {
   end_line: number | null;
   description: string;
   source_reference: string;
+}
+
+export interface ClassifiedEvidenceItem {
+  evidence_id: string;
+  category: string;
+  file_path: string;
+  symbol: string | null;
+  relevance_score: number;
+  reason: string;
 }
 
 export interface Hypothesis {

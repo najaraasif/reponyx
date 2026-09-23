@@ -17,6 +17,7 @@ from reponyx.investigation.models import (
     VerificationStatus,
 )
 from reponyx.investigation.prompts import PROMPT_VERSION
+from reponyx.investigation.ranker import classify_evidence
 from reponyx.investigation.tools import InvestigationToolError, InvestigationTools
 
 logger = logging.getLogger(__name__)
@@ -218,6 +219,7 @@ class InvestigationGraph:
             sorted({item.file_path for item in state.get("evidence", []) if item.file_path})
         )
         symbols = tuple(sorted({item.symbol for item in state.get("evidence", []) if item.symbol}))
+        classified = classify_evidence(state.get("evidence", []), state["issue"])
         report = InvestigationReport(
             issue=state["issue"],
             repository_id=state["repository_id"],
@@ -249,6 +251,7 @@ class InvestigationGraph:
             recommended_next_step="Perform a controlled verification in a later execution phase."
             if root_cause
             else "Gather additional repository evidence before drawing a root-cause conclusion.",
+            classified_evidence=tuple(classified),
         )
         self._event(state, "build_report", "completed")
         return {
