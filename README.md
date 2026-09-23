@@ -99,6 +99,26 @@ curl http://127.0.0.1:8000/repairs/{REPAIR_ID}/diff
           └──────────────────┘     └──────────────────┘
 ```
 
+## Screenshots
+
+### Investigation
+
+Evidence collection and root-cause analysis for the demo calculator repo. Shows retrieved evidence, hypotheses, and identified root cause.
+
+![Investigation](screenshots/investigation.png)
+
+### Repair
+
+Patch diff and test execution results. Shows the generated diff, changed files, and Docker test verification.
+
+![Repair](screenshots/repair.png)
+
+### Review
+
+Completed repair with verification status. Shows the approve/reject workflow and repair report.
+
+![Review](screenshots/review.png)
+
 ## Capabilities
 
 ### Repository Intelligence
