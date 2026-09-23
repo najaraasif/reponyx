@@ -92,6 +92,13 @@ class VectorStore:
                 ).all()
             )
 
+    def is_indexed(self, repository_id: str) -> bool:
+        with self.sessions() as session:
+            record = session.scalars(
+                select(IndexStatusRecord).where(IndexStatusRecord.repository_id == repository_id)
+            ).first()
+            return record is not None and record.status == "completed"
+
     def delete_repository(self, repository_id: str) -> None:
         with self.sessions.begin() as session:
             session.execute(delete(VectorRecord).where(VectorRecord.repository_id == repository_id))

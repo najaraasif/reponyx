@@ -42,6 +42,11 @@ class RetrievalService:
             raise KeyError(repository_id)
         return self.indexer.status(repository_id)
 
+    def is_indexed(self, repository_id: str) -> bool:
+        if self.indexer.repositories.get(repository_id) is None:
+            return False
+        return self.indexer.vectors.is_indexed(repository_id)
+
     def search(
         self,
         repository_id: str,

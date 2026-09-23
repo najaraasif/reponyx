@@ -279,6 +279,10 @@ def create_app(
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="repository not found") from exc
 
+    @app.get("/repositories/{repository_id}/index/is-indexed", tags=["retrieval"])
+    def is_indexed(repository_id: str, retrieval: RetrievalDependency) -> object:
+        return {"repository_id": repository_id, "indexed": retrieval.is_indexed(repository_id)}
+
     @app.post("/repositories/{repository_id}/search", tags=["retrieval"])
     def search_repository(
         repository_id: str, request: SearchRequest, retrieval: RetrievalDependency
