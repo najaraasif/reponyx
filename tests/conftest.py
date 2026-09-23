@@ -1,5 +1,5 @@
-import tempfile
 import os
+import tempfile
 
 # Override the default temp directory to avoid permission issues on Windows
 # The default pytest-of-<user> directory can get locked

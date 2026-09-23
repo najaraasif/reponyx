@@ -3,8 +3,8 @@
 The default basetemp (pytest-of-<user>) can become locked on Windows,
 causing PermissionError for all tests. This redirects to a writable location.
 """
-import tempfile
 import os
+import tempfile
 
 
 def pytest_configure(config):
