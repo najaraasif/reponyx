@@ -210,8 +210,19 @@ export interface RepairReview {
     patch_description: string | null;
     final_report: string;
     root_cause: string | null;
+    confidence: string;
+    confidence_score: number;
+    confidence_reasons: string[];
   };
   diff: string | null;
+}
+
+export interface PullRequestResult {
+  pr_url: string;
+  pr_number: number;
+  branch_name: string;
+  commit_sha: string;
+  repository: string;
 }
 
 export interface RepairHistoryItem {

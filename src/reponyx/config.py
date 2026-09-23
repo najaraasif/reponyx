@@ -57,6 +57,8 @@ class Settings(BaseSettings):
     llm_max_calls: int = 20
     llm_max_context_characters: int = 30_000
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    github_token: str | None = None
+    github_pr_branch_prefix: str = "reponyx/fix"
 
 
 @lru_cache

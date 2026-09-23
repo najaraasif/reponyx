@@ -1,5 +1,6 @@
 """FastAPI application entry point."""
 
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -9,6 +10,7 @@ from pydantic import BaseModel, Field
 from reponyx import __version__
 from reponyx.config import Settings, get_settings
 from reponyx.execution.service import ExecutionService
+from reponyx.github.service import GitHubService, GitHubServiceError
 from reponyx.investigation.service import InvestigationService
 from reponyx.repair.ollama import OllamaStructuredProvider
 from reponyx.repair.operations_service import RepairOperationsService
@@ -453,6 +455,58 @@ def create_app(
             return operations.reject(repair_id)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="repair not found") from exc
+
+    @app.post("/repairs/{repair_id}/create-pr", tags=["github"])
+    def create_pull_request(
+        repair_id: str,
+        repairs: RepairDependency,
+        repositories: RepositoryDependency,
+    ) -> object:
+        report = repairs.report(repair_id)
+        if report is None:
+            raise HTTPException(status_code=404, detail="repair not found")
+        if report.get("status") != "completed":
+            raise HTTPException(
+                status_code=422,
+                detail="PR creation requires a completed repair with passing tests",
+            )
+        repo = repositories.store.get(report.get("repository_id", ""))
+        if repo is None:
+            raise HTTPException(status_code=404, detail="repository not found")
+        settings = get_settings()
+        if not settings.github_token:
+            raise HTTPException(
+                status_code=503,
+                detail="GitHub integration not configured. Set GITHUB_TOKEN environment variable.",
+            )
+        workspace = Path(repo.workspace_path)
+        if not workspace.exists():
+            raise HTTPException(
+                status_code=503,
+                detail="Repository workspace not found on disk.",
+            )
+        try:
+            github = GitHubService(settings)
+            result = github.create_pull_request(
+                workspace_path=workspace,
+                repository_url=repo.url,
+                issue_title=report.get("issue", "")[:200],
+                issue_body=report.get("issue", ""),
+                diff=report.get("final_diff", ""),
+                changed_files=report.get("changed_files", []),
+                repair_id=repair_id,
+                root_cause=report.get("root_cause"),
+                confidence=report.get("confidence", "low"),
+            )
+            return {
+                "pr_url": result.pr_url,
+                "pr_number": result.pr_number,
+                "branch_name": result.branch_name,
+                "commit_sha": result.commit_sha,
+                "repository": result.repository,
+            }
+        except GitHubServiceError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     return app
 

@@ -12,6 +12,7 @@ import {
   RepairReview,
   RepairHistoryItem,
   SearchResult,
+  PullRequestResult,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
@@ -98,6 +99,8 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ issue, investigation_id: investigationId }),
       }),
+    createPR: (id: string) =>
+      request<PullRequestResult>(`/repairs/${id}/create-pr`, { method: "POST" }),
   },
 };
 

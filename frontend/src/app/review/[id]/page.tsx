@@ -6,7 +6,7 @@ import Header from "@/components/Header";
 import StatusBadge from "@/components/StatusBadge";
 import DiffViewer from "@/components/DiffViewer";
 import { api } from "@/lib/api";
-import type { RepairReview } from "@/lib/types";
+import type { RepairReview, PullRequestResult } from "@/lib/types";
 
 export default function ReviewDetailPage() {
   const params = useParams();
@@ -15,6 +15,9 @@ export default function ReviewDetailPage() {
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"approve" | "reject" | null>(null);
+  const [creatingPR, setCreatingPR] = useState(false);
+  const [prResult, setPrResult] = useState<PullRequestResult | null>(null);
+  const [prError, setPrError] = useState<string | null>(null);
 
   useEffect(() => {
     api.repairs.review(id).then(setReview).catch(() => {}).finally(() => setLoading(false));
@@ -29,6 +32,18 @@ export default function ReviewDetailPage() {
     } catch {}
     setActing(false);
     setConfirmAction(null);
+  }
+
+  async function handleCreatePR() {
+    setCreatingPR(true);
+    setPrError(null);
+    try {
+      const result = await api.repairs.createPR(id);
+      setPrResult(result);
+    } catch (err: any) {
+      setPrError(err.message || "Failed to create pull request");
+    }
+    setCreatingPR(false);
   }
 
   if (loading) {
@@ -206,6 +221,65 @@ export default function ReviewDetailPage() {
             <p className="text-sm text-fg-muted">{r.final_report}</p>
           </section>
         )}
+
+        <section>
+          <div className="section-title">GitHub Integration</div>
+          {prResult ? (
+            <div className="border border-success/20 bg-success/5 rounded p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <svg className="w-5 h-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-sm font-medium text-success">Pull Request Created</span>
+              </div>
+              <div className="space-y-1 text-sm">
+                <div>
+                  <span className="text-fg-muted">PR: </span>
+                  <a href={prResult.pr_url} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline font-mono text-xs">
+                    #{prResult.pr_number}
+                  </a>
+                </div>
+                <div>
+                  <span className="text-fg-muted">Branch: </span>
+                  <span className="font-mono text-xs">{prResult.branch_name}</span>
+                </div>
+                <div>
+                  <span className="text-fg-muted">Commit: </span>
+                  <span className="font-mono text-xs">{prResult.commit_sha.slice(0, 8)}</span>
+                </div>
+              </div>
+            </div>
+          ) : prError ? (
+            <div className="border border-danger/20 bg-danger/5 rounded p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <svg className="w-5 h-5 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <span className="text-sm font-medium text-danger">PR Creation Failed</span>
+              </div>
+              <p className="text-xs text-fg-muted">{prError}</p>
+            </div>
+          ) : r.status === "completed" && r.confidence !== "low" ? (
+            <div className="border border-border rounded p-4">
+              <p className="text-sm text-fg-muted mb-3">
+                Create a pull request with the verified changes from this repair.
+              </p>
+              <button
+                onClick={handleCreatePR}
+                disabled={creatingPR}
+                className="btn-primary"
+              >
+                {creatingPR ? "Creating PR..." : "Create Pull Request"}
+              </button>
+            </div>
+          ) : (
+            <div className="border border-border rounded p-4">
+              <p className="text-sm text-fg-muted">
+                PR creation requires a completed repair with passing tests and sufficient confidence.
+              </p>
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
