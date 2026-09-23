@@ -143,9 +143,13 @@ export interface RepairReport {
   repair_plan: string | null;
   changed_files: string[];
   test_results: TestResult[];
-  failure_analysis: FailureAnalysis | null;
-  repair_decision: string | null;
+  verification_level: string;
+  patch_description: string | null;
   final_report: string;
+  confidence: string;
+  confidence_score: number;
+  confidence_reasons: string[];
+  patch_attempts: PatchAttempt[];
 }
 
 export interface TestResult {
@@ -155,6 +159,29 @@ export interface TestResult {
   skipped: number;
   duration: number;
   output: string;
+}
+
+export interface PatchAttempt {
+  iteration: number;
+  patch: {
+    patch_id: string;
+    files_changed: string[];
+    diff: string;
+    description: string;
+    reason: string;
+  } | null;
+  validation_error: string | null;
+  execution_id: string | null;
+  test_result: {
+    exit_code: number | null;
+    test_summary: {
+      passed: number;
+      failed: number;
+      skipped: number;
+      discovered: number;
+    } | null;
+  } | null;
+  failure_analysis: string | null;
 }
 
 export interface FailureAnalysis {

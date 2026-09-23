@@ -267,8 +267,39 @@ class RepairGraph:
         )
 
     def finalize_repair(self, state: RepairState) -> dict[str, object]:
+        from reponyx.repair.confidence import compute_repair_confidence
+
         status = state.get("repair_status", RepairStatus.FAILED)
         patch = state.get("current_patch")
+        test_executions = state.get("test_executions", [])
+        total_passed = sum(
+            result.test_summary.passed
+            for result in test_executions
+            if result.test_summary
+        )
+        total_failed = sum(
+            result.test_summary.failed
+            for result in test_executions
+            if result.test_summary
+        )
+        total_discovered = sum(
+            result.test_summary.discovered
+            for result in test_executions
+            if result.test_summary
+        )
+        conf = compute_repair_confidence(
+            status=status,
+            verification_level=state.get("verification_level", VerificationLevel.UNVERIFIED),
+            iteration_count=state.get("iteration_count", 0),
+            max_iterations=5,
+            evidence_count=len(state.get("evidence", [])),
+            tests_passed=total_passed,
+            tests_failed=total_failed,
+            tests_discovered=total_discovered,
+            has_root_cause=bool(state.get("root_cause")),
+            has_diff=bool(patch and patch.diff),
+            failure_analyses=cast(list[object], state.get("failure_analyses", [])),
+        )
         report = RepairReport(
             repair_id=state["repair_id"],
             repository_id=state["repository_id"],
@@ -279,15 +310,15 @@ class RepairGraph:
             symbols_changed=(),
             patch_description=patch.description if patch else None,
             iterations=state.get("iteration_count", 0),
-            tests_run=tuple(result.command[0] for result in state.get("test_executions", [])),
+            tests_run=tuple(result.command[0] for result in test_executions),
             tests_passed=tuple(
                 result.execution_id
-                for result in state.get("test_executions", [])
+                for result in test_executions
                 if result.exit_code == 0
             ),
             tests_failed=tuple(
                 result.execution_id
-                for result in state.get("test_executions", [])
+                for result in test_executions
                 if result.exit_code not in {0, None}
             ),
             final_status=status,
@@ -300,12 +331,15 @@ class RepairGraph:
             llm_calls=cast(int, state.get("llm_calls", 0)),
             model_provider=cast(str, state.get("model_provider", "mock")),
             model_name=cast(str, state.get("model_name", "deterministic")),
-            confidence="medium" if patch else "low",
+            confidence=conf.level,
             limitations=(
                 "Canonical repository was never modified.",
                 "No commits, pushes, or pull requests were created.",
             ),
             final_diff=patch.diff if patch else "",
+            confidence_score=conf.score,
+            confidence_reasons=conf.reasons,
+            patch_attempts=tuple(state.get("patch_history", [])),
         )
         return {"final_report": report, "repair_status": status}
 

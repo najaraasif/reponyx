@@ -91,6 +91,31 @@ export default function ReviewDetailPage() {
           <p className="text-sm text-fg whitespace-pre-wrap">{r.issue}</p>
         </section>
 
+        <section>
+          <div className="section-title">Confidence</div>
+          <div className="border border-border rounded p-3">
+            <div className="flex items-center gap-3 mb-2">
+              <span className={`text-sm font-medium ${r.confidence === "high" ? "text-success" : r.confidence === "medium" ? "text-warning" : "text-fg-muted"}`}>
+                {r.confidence.toUpperCase()}
+              </span>
+              <span className="text-xs text-fg-muted">Score: {r.confidence_score?.toFixed(2) || "0.00"}</span>
+              <span className="text-xs text-fg-muted">Level: {r.verification_level?.replace(/_/g, " ")}</span>
+            </div>
+            {r.confidence_reasons && r.confidence_reasons.length > 0 && (
+              <div className="space-y-1">
+                {r.confidence_reasons.map((reason, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs text-fg-muted">
+                    <span className={`mt-0.5 shrink-0 ${reason.includes("passed") ? "text-success" : reason.includes("failed") ? "text-danger" : "text-fg-subtle"}`}>
+                      {reason.includes("passed") ? "✓" : reason.includes("failed") ? "✗" : "•"}
+                    </span>
+                    {reason}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
         {r.root_cause && (
           <section>
             <div className="section-title">Root Cause</div>
@@ -111,6 +136,30 @@ export default function ReviewDetailPage() {
             <div className="space-y-0.5">
               {r.changed_files.map((f) => (
                 <div key={f} className="font-mono text-xs text-fg bg-bg-inset rounded px-2 py-1">{f}</div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {r.patch_attempts && r.patch_attempts.length > 0 && (
+          <section>
+            <div className="section-title">Patch Attempts</div>
+            <div className="space-y-2">
+              {r.patch_attempts.map((attempt, i) => (
+                <div key={i} className="border border-border rounded p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-mono text-xs text-fg-subtle">Attempt {attempt.iteration + 1}</span>
+                    <span className={`text-xs ${attempt.test_result?.exit_code === 0 ? "text-success" : "text-danger"}`}>
+                      {attempt.test_result?.exit_code === 0 ? "Tests Passed" : "Tests Failed"}
+                    </span>
+                  </div>
+                  {attempt.patch && (
+                    <div className="text-xs text-fg-muted">{attempt.patch.description}</div>
+                  )}
+                  {attempt.validation_error && (
+                    <div className="text-xs text-danger mt-1">Validation: {attempt.validation_error}</div>
+                  )}
+                </div>
               ))}
             </div>
           </section>

@@ -135,6 +135,10 @@ class RepairService:
             "patch_description": raw.get("patch_description"),
             "verification_level": raw.get("verification_level", "unverified"),
             "final_diff": final_diff,
+            "confidence": raw.get("confidence", "low"),
+            "confidence_score": raw.get("confidence_score", 0.0),
+            "confidence_reasons": raw.get("confidence_reasons", []),
+            "patch_attempts": raw.get("patch_attempts", []),
         }
 
     def report(self, repair_id: str) -> dict[str, object] | None:

@@ -109,6 +109,9 @@ class RepairReport:
     confidence: str = "low"
     limitations: tuple[str, ...] = ()
     final_diff: str = ""
+    confidence_score: float = 0.0
+    confidence_reasons: tuple[str, ...] = ()
+    patch_attempts: tuple[object, ...] = ()
 
 
 class RepairState(TypedDict, total=False):
