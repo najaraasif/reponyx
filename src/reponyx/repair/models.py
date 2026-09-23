@@ -139,3 +139,12 @@ class RepairState(TypedDict, total=False):
     patch_description: str
     patch_reason: str
     verification_level: VerificationLevel
+    primary_file: str
+    repair_plan: dict[str, object]
+    root_cause_analysis: object
+    failure_analyses: list[object]
+    repair_decision: str
+    retrieved_sources: list[object]
+    llm_calls: int
+    model_provider: str
+    model_name: str

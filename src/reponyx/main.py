@@ -77,6 +77,7 @@ class TestExecutionRequest(BaseModel):
 class RepairRequest(BaseModel):
     issue: str = Field(min_length=1, max_length=10_000)
     investigation_id: str | None = None
+    primary_file: str = ""
 
 
 def create_app(
@@ -385,7 +386,12 @@ def create_app(
         repository_id: str, request: RepairRequest, repairs: RepairDependency
     ) -> object:
         try:
-            return repairs.create(repository_id, request.issue, request.investigation_id)
+            return repairs.create(
+                repository_id,
+                request.issue,
+                request.investigation_id,
+                primary_file=request.primary_file,
+            )
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="repository not found") from exc
 

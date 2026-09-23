@@ -1,6 +1,7 @@
 """Bounded LangGraph repair workflow operating only on ephemeral workspaces."""
 
 import logging
+from pathlib import Path
 from typing import Any, cast
 
 from langgraph.graph import END, StateGraph
@@ -22,6 +23,7 @@ from reponyx.repair.models import (
     VerificationLevel,
 )
 from reponyx.repair.patching import PatchService, PatchValidationError
+from reponyx.repair.planner import CrossFilePlanner
 from reponyx.repair.workspace import RepairWorkspaceService
 
 logger = logging.getLogger(__name__)
@@ -35,12 +37,14 @@ class RepairGraph:
         execution: ExecutionService,
         model: RepairModel,
         max_iterations: int = 5,
+        planner: CrossFilePlanner | None = None,
     ) -> None:
         self.workspaces = workspaces
         self.patcher = patcher
         self.execution = execution
         self.model = model
         self.max_iterations = max_iterations
+        self.planner = planner or CrossFilePlanner()
         self.workflow = self._build()
 
     def _build(self) -> Any:
@@ -86,11 +90,20 @@ class RepairGraph:
             return state
 
     def create_repair_plan(self, state: RepairState) -> dict[str, object]:
+        workspace_path = Path(self.workspaces.path(state["repair_id"]))
+        affected = self.planner.plan(
+            workspace_path,
+            primary_file=state.get("primary_file", ""),
+            issue=state["issue"],
+            evidence=state.get("evidence"),
+        )
+        affected_paths = [a.file_path for a in affected]
+        affected_reasons = {a.file_path: a.reason for a in affected}
         root_cause = RootCauseAnalysis(
             observed_behavior=state["issue"],
             expected_behavior="The requested issue behavior should work without regressions.",
             likely_root_cause="Requires evidence-backed repair analysis.",
-            affected_files=tuple(state.get("changed_files", [])),
+            affected_files=tuple(affected_paths),
             affected_symbols=(),
             dependencies=(),
             supporting_evidence=tuple(state.get("evidence", [])),
@@ -103,6 +116,8 @@ class RepairGraph:
             "repair_plan": {
                 "summary": "Generate and validate a minimal evidence-backed patch.",
                 "test_strategy": [state.get("targeted_framework", "pytest")],
+                "affected_files": affected_paths,
+                "affected_reasons": affected_reasons,
             },
             "root_cause_analysis": root_cause,
         }
@@ -146,10 +161,13 @@ class RepairGraph:
                 state.get("patch_reason", ""),
                 state.get("evidence", []),
             )
+            new_files = [item.file_path for item in patch.files_changed]
+            previous = state.get("changed_files", [])
+            accumulated = list(dict.fromkeys(previous + new_files))
             return {
                 "current_patch": patch,
                 "repair_status": RepairStatus.TESTING,
-                "changed_files": [item.file_path for item in patch.files_changed],
+                "changed_files": accumulated,
                 "changed_lines": patch.diff.count("\n"),
             }
         except PatchValidationError as exc:
@@ -298,6 +316,7 @@ def initial_repair_state(
     issue: str,
     workspace_path: str,
     investigation_id: str | None = None,
+    primary_file: str = "",
 ) -> RepairState:
     return RepairState(
         repair_id=repair_id,
@@ -321,4 +340,13 @@ def initial_repair_state(
         final_report=None,
         errors=[],
         cancelled=False,
+        primary_file=primary_file,
+        repair_plan={},
+        root_cause_analysis=None,
+        failure_analyses=[],
+        repair_decision="",
+        retrieved_sources=[],
+        llm_calls=0,
+        model_provider="mock",
+        model_name="deterministic",
     )

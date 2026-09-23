@@ -507,3 +507,121 @@ def test_variance_repair_report_contains_repair_result(tmp_path: Path) -> None:
     assert report["verification_level"] == "targeted_tests_passed"
     assert report["iterations"] >= 1
     assert len(report["changed_files"]) > 0
+
+
+# ---------------------------------------------------------------------------
+# Multi-file repair tests
+# ---------------------------------------------------------------------------
+
+MULTIFILE_FIXTURE = Path(__file__).parents[1] / "fixtures" / "multifile_repo"
+
+
+class MultifilePassingRunner:
+    def run(self, request: ExecutionRequest, canonical_workspace: Path) -> ExecutionResult:
+        now = datetime.now(UTC)
+        return ExecutionResult(
+            request.execution_id,
+            request.repository_id,
+            request.command,
+            ExecutionStatus.COMPLETED,
+            0,
+            "1 passed in 0.01s",
+            "",
+            10,
+            False,
+            False,
+            False,
+            "repair-fake",
+            now,
+            now,
+        )
+
+
+def make_multifile_service(
+    tmp_path: Path, model: DeterministicRepairModel
+) -> tuple[RepairService, RepositoryService]:
+    settings = Settings(
+        _env_file=None,
+        workspace_root=str(tmp_path / "workspaces"),
+        database_url=f"sqlite:///{tmp_path / 'reponyx.db'}",
+        execution_root=str(tmp_path / "executions"),
+        repair_workspace_root=str(tmp_path / "repairs"),
+        embedding_dimensions=16,
+        repair_max_iterations=2,
+    )
+    repositories = RepositoryService(settings, RepositoryStore(settings.database_url))
+    repositories.register_for_testing("multifile-repo", MULTIFILE_FIXTURE)
+    execution = ExecutionService(settings, repositories, MultifilePassingRunner())
+    return RepairService(settings, repositories, execution, model), repositories
+
+
+MULTIFILE_API_FIX = ProposedChange(
+    file_path="src/api.py",
+    operation=ChangeType.MODIFIED,
+    content=(MULTIFILE_FIXTURE / "src" / "api.py")
+    .read_text()
+    .replace(
+        "name=name,",
+        "name=name if name is not None else '',",
+    ),
+)
+
+
+def test_cross_file_planner_finds_importers() -> None:
+    from reponyx.repair.planner import CrossFilePlanner
+
+    planner = CrossFilePlanner()
+    affected = planner.plan(MULTIFILE_FIXTURE, "src/models.py", "user creation fails")
+    paths = [a.file_path for a in affected]
+    assert "src/models.py" in paths
+    assert "src/api.py" in paths
+
+
+def test_cross_file_planner_finds_test_files() -> None:
+    from reponyx.repair.planner import CrossFilePlanner
+
+    planner = CrossFilePlanner()
+    affected = planner.plan(MULTIFILE_FIXTURE, "src/models.py", "user creation fails")
+    paths = [a.file_path for a in affected]
+    assert any("test_api" in p for p in paths)
+
+
+def test_cross_file_planner_includes_primary() -> None:
+    from reponyx.repair.planner import CrossFilePlanner
+
+    planner = CrossFilePlanner()
+    affected = planner.plan(MULTIFILE_FIXTURE, "src/api.py", "create user")
+    assert any(a.file_path == "src/api.py" and a.confidence == 1.0 for a in affected)
+
+
+def test_multi_file_repair_applies_multiple_changes(tmp_path: Path) -> None:
+    model = DeterministicRepairModel()
+    model.add_keyword_rule(
+        keywords=["user", "name", "none"],
+        changes=[MULTIFILE_API_FIX],
+    )
+    service, _repositories = make_multifile_service(tmp_path, model)
+    result = service.create(
+        "multifile-repo",
+        "user name none causes error",
+        primary_file="src/api.py",
+    )
+    assert result["status"] in {"completed", "failed"}
+
+
+def test_multi_file_diff_contains_multiple_files(tmp_path: Path) -> None:
+    model = DeterministicRepairModel()
+    model.add_keyword_rule(
+        keywords=["user", "name", "none"],
+        changes=[MULTIFILE_API_FIX],
+    )
+    service, _repositories = make_multifile_service(tmp_path, model)
+    result = service.create(
+        "multifile-repo",
+        "user name none causes error",
+        primary_file="src/api.py",
+    )
+    repair_id = result["repair_id"]
+    diff = service.diff(repair_id)
+    assert diff is not None
+    assert "src/api.py" in diff

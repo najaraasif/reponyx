@@ -42,11 +42,20 @@ class RepairService:
         self.active: dict[str, dict[str, object]] = {}
 
     def create(
-        self, repository_id: str, issue: str, investigation_id: str | None = None
+        self,
+        repository_id: str,
+        issue: str,
+        investigation_id: str | None = None,
+        primary_file: str = "",
     ) -> dict[str, str]:
         workspace = self.workspaces.create(repository_id, investigation_id)
         state = initial_repair_state(
-            workspace.repair_id, repository_id, issue, workspace.workspace_path, investigation_id
+            workspace.repair_id,
+            repository_id,
+            issue,
+            workspace.workspace_path,
+            investigation_id,
+            primary_file=primary_file,
         )
         self.active[workspace.repair_id] = cast(dict[str, object], state)
         result = RepairGraph(
